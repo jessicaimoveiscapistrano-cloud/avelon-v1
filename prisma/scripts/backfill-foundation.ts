@@ -88,9 +88,16 @@ async function main() {
     FACEBOOK_LEADS: { type: "FACEBOOK", label: "Facebook" },
     WHATSAPP: { type: "WHATSAPP", label: "WhatsApp" },
   };
-
-  const legacySources: { id: string; tenantId: string; key: string; label: string }[] =
-    await prisma.$queryRawUnsafe(`SELECT id, "tenantId", key, label FROM "IntegrationSource"`).catch(() => []);
+const legacySources = (await prisma.$queryRawUnsafe<
+  { id: string; tenantId: string; key: string; label: string }[]
+>(
+  `SELECT id, "tenantId", key, label FROM "IntegrationSource"`
+).catch(() => [])) as {
+  id: string;
+  tenantId: string;
+  key: string;
+  label: string;
+}[];;
 
   for (const legacy of legacySources) {
     const mapping = KEY_TO_CHANNEL[legacy.key] ?? { type: "OUTRO", label: legacy.label };
