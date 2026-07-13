@@ -1,0 +1,783 @@
+// ═══════════════════════════════════════════════════════════════════════
+// AVELON PLATFORM — SCHEMA DEFINITIVO (Fase 0/1)
+// Referência: ARCHITECTURE.md
+// Nenhuma API ou tela é implementada nesta fase — apenas fundação de dados.
+// ═══════════════════════════════════════════════════════════════════════
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// ENUMS
+// ───────────────────────────────────────────────────────────────────────
+
+enum AvelonStaffRole {
+  SUPER_ADMIN
+  SUPPORT
+  ENGINEER
+  FINANCE
+}
+
+enum UserRole {
+  OWNER
+  MANAGER
+  CORRECTOR
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
+enum BusinessChannelType {
+  WHATSAPP
+  INSTAGRAM
+  FACEBOOK
+  GOOGLE
+  SITE
+  LANDING_PAGE
+  CHAT_SITE
+  PORTAL
+  INDICACAO
+  CAMPANHA
+  MANUAL
+  OUTRO
+}
+
+enum AuditActorType {
+  AVELON_STAFF
+  TENANT_USER
+  SYSTEM
+}
+
+enum IntegrationHealthStatus {
+  OK
+  DEGRADED
+  ERROR
+}
+
+enum LeadStatusKey {
+  NEW
+  FIRST_CONTACT
+  IN_PROGRESS
+  SCHEDULED_VISIT
+  VISITED
+  PROPOSAL
+  NEGOTIATION
+  CONTRACT
+  WON
+  LOST
+}
+
+enum LeadActionType {
+  CALL
+  VISIT
+  MEETING
+  RETURN
+}
+
+enum NotificationType {
+  NEW_LEAD
+  TASK_OVERDUE
+  CUSTOM
+}
+
+enum PropertyPurpose {
+  SALE
+  RENT
+}
+
+enum DistributionMode {
+  MANUAL
+  BY_CITY
+  BY_CORRECTOR
+  ROUND_ROBIN
+}
+
+enum WhatsAppMessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum WhatsAppMessageStatus {
+  RECEIVED
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// AVELON PLATFORM — identidade interna (nunca cruza com Tenant)
+// ───────────────────────────────────────────────────────────────────────
+
+model AvelonStaff {
+  id           String          @id @default(cuid())
+  name         String
+  email        String          @unique
+  passwordHash String
+  role         AvelonStaffRole @default(SUPPORT)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  auditLogs AuditLog[]
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// HIERARQUIA: Organization → Tenant → Workspace → User
+// ───────────────────────────────────────────────────────────────────────
+
+model Organization {
+  id   String @id @default(cuid())
+  name String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenants Tenant[]
+}
+
+model Tenant {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspaces        Workspace[]
+  users             User[]
+  leads             Lead[]
+  leadMovements     LeadMovement[]
+  leadActions       LeadAction[]
+  leadTasks         LeadTask[]
+  leadAttachments   LeadAttachment[]
+  leadTimelineViews LeadTimelineView[]
+  distributionRules LeadDistributionRule[]
+
+  technicalSources    TechnicalSource[]
+  businessChannels    BusinessChannel[]
+  campaigns           Campaign[]
+  webhooks            IntegrationWebhook[]
+  facebookPageConfigs FacebookPageConfig[]
+  whatsappConfig      WhatsAppConfig?
+  whatsappMessages    WhatsAppMessage[]
+
+  notifications         Notification[]
+  subscription           Subscription?
+  featureOverrides       TenantFeatureOverride[]
+  auditLogs              AuditLog[]
+  integrationHealthLogs  IntegrationHealthLog[]
+  domainEventLogs        DomainEventLog[]
+
+  @@index([organizationId])
+}
+
+model Workspace {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name      String
+  isDefault Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users User[]
+  leads Lead[]
+
+  @@index([tenantId])
+}
+
+model User {
+  id          String    @id @default(cuid())
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+
+  // hierarquia de equipe (Manager enxerga os que apontam managerId para ele)
+  managerId     String?
+  manager       User?  @relation("UserManager", fields: [managerId], references: [id])
+  directReports User[] @relation("UserManager")
+
+  name         String
+  email        String  @unique
+  phone        String?
+  passwordHash String?
+
+  role UserRole @default(CORRECTOR)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignedLeads Lead[] @relation("LeadAssignee")
+
+  // NextAuth (mantido para uso futuro com OAuth do lado do tenant)
+  accounts Account[]
+  sessions Session[]
+
+  leadMovements        LeadMovement[]         @relation("LeadMovementChangedBy")
+  leadActions          LeadAction[]           @relation("LeadActionCreatedBy")
+  completedTasks       LeadTask[]             @relation("LeadTaskCompletedBy")
+  assignedTasks        LeadTask[]             @relation("LeadTaskAssignedTo")
+  distributionRules    LeadDistributionRule[] @relation("DistributionRuleAssignedTo")
+  notifications        Notification[]
+  timelineViews        LeadTimelineView[]
+  sentWhatsAppMessages WhatsAppMessage[]      @relation("WhatsAppMessageSentBy")
+  auditLogs            AuditLog[]
+
+  @@index([tenantId])
+  @@index([workspaceId])
+  @@index([managerId])
+}
+
+// NextAuth tables — escopo exclusivo do lado Tenant
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// CONTRATAÇÃO: Plan, Module, Feature, Subscription
+// ───────────────────────────────────────────────────────────────────────
+
+model Module {
+  id   String @id @default(cuid())
+  key  String @unique // "CRM", "FINANCEIRO", "DOCUMENTOS", "CONTRATOS", "MARKETING", "IA", "BI", "API_PUBLICA", "MARKETPLACE"
+  name String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  features Feature[]
+}
+
+model Feature {
+  id       String @id @default(cuid())
+  moduleId String
+  module   Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  key  String // "CRM_LEADS", "CRM_KANBAN", "CRM_AGENDA", "CRM_RELATORIOS", "CRM_WHATSAPP", "IA_ASSISTENTE"...
+  name String
+
+  planFeatures    PlanFeature[]
+  tenantOverrides TenantFeatureOverride[]
+
+  @@unique([moduleId, key])
+}
+
+model Plan {
+  id   String @id @default(cuid())
+  key  String @unique // "STARTER", "PROFESSIONAL", "ENTERPRISE"
+  name String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  planFeatures  PlanFeature[]
+  subscriptions Subscription[]
+}
+
+model PlanFeature {
+  id String @id @default(cuid())
+
+  planId    String
+  plan      Plan    @relation(fields: [planId], references: [id], onDelete: Cascade)
+  featureId String
+  feature   Feature @relation(fields: [featureId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, featureId])
+}
+
+model Subscription {
+  id       String @id @default(cuid())
+  tenantId String @unique
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  planId String
+  plan   Plan   @relation(fields: [planId], references: [id])
+
+  status     SubscriptionStatus @default(TRIAL)
+  startedAt  DateTime           @default(now())
+  renewsAt   DateTime?
+  canceledAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TenantFeatureOverride {
+  id String @id @default(cuid())
+
+  tenantId  String
+  tenant    Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  featureId String
+  feature   Feature @relation(fields: [featureId], references: [id], onDelete: Cascade)
+
+  enabled Boolean @default(true) // permite tanto liberar quanto revogar pontualmente
+
+  createdAt DateTime @default(now())
+
+  @@unique([tenantId, featureId])
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// PERMISSÕES: Role → Permission (papéis fixos na V1, catálogo extensível)
+// ───────────────────────────────────────────────────────────────────────
+
+model Permission {
+  id          String  @id @default(cuid())
+  key         String  @unique // "leads.view_all", "leads.view_team", "leads.view_own", ...
+  description String?
+
+  rolePermissions RolePermission[]
+}
+
+model RolePermission {
+  id           String     @id @default(cuid())
+  role         UserRole
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([role, permissionId])
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// ORIGEM DO LEAD: TechnicalSource (Avelon) × BusinessChannel/Campaign (Tenant)
+// ───────────────────────────────────────────────────────────────────────
+
+model TechnicalSource {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  kind  String // identificador técnico interno: "TYPEBOT_IMOVEIS", "MAKE_SITE", "FACEBOOK_LEADS", "WHATSAPP"
+  label String // rótulo técnico, visível apenas em /staff
+
+  businessChannelId String?
+  businessChannel    BusinessChannel? @relation(fields: [businessChannelId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  webhooks            IntegrationWebhook[]
+  leads                Lead[]
+  facebookPageConfigs  FacebookPageConfig[]
+  whatsappConfig       WhatsAppConfig?
+  healthLogs           IntegrationHealthLog[]
+
+  @@unique([tenantId, kind])
+}
+
+model BusinessChannel {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  type         BusinessChannelType
+  displayLabel String // texto comercial exibido ao tenant (customizável em V2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  technicalSources  TechnicalSource[]
+  campaigns         Campaign[]
+  leads             Lead[]
+  distributionRules LeadDistributionRule[]
+
+  @@unique([tenantId, type])
+}
+
+model Campaign {
+  id                String          @id @default(cuid())
+  tenantId          String
+  tenant            Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  businessChannelId String
+  businessChannel   BusinessChannel @relation(fields: [businessChannelId], references: [id], onDelete: Cascade)
+
+  name     String
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  leads Lead[]
+
+  @@index([tenantId, businessChannelId])
+}
+
+model IntegrationWebhook {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  technicalSourceId String
+  technicalSource   TechnicalSource @relation(fields: [technicalSourceId], references: [id], onDelete: Cascade)
+
+  secret  String  @db.Text
+  enabled Boolean @default(true)
+
+  createdAt DateTime @default(now())
+}
+
+model FacebookPageConfig {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  technicalSourceId String
+  technicalSource   TechnicalSource @relation(fields: [technicalSourceId], references: [id], onDelete: Cascade)
+
+  pageId          String  @unique
+  pageName        String?
+  pageAccessToken String  @db.Text
+
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+model WhatsAppConfig {
+  id       String @id @default(cuid())
+  tenantId String @unique
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  technicalSourceId String @unique
+  technicalSource   TechnicalSource @relation(fields: [technicalSourceId], references: [id], onDelete: Cascade)
+
+  phoneNumberId      String @unique
+  businessAccountId  String
+  displayPhoneNumber String?
+  accessToken        String @db.Text
+
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model WhatsAppMessage {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  leadId String
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  direction  WhatsAppMessageDirection
+  fromNumber String
+  toNumber   String
+
+  body     String?
+  mediaUrl String?
+
+  waMessageId String?               @unique
+  status      WhatsAppMessageStatus @default(RECEIVED)
+
+  sentByUserId String?
+  sentByUser   User?   @relation("WhatsAppMessageSentBy", fields: [sentByUserId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, leadId, createdAt])
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// LEADS (núcleo comercial)
+// ───────────────────────────────────────────────────────────────────────
+
+model Lead {
+  id          String    @id @default(cuid())
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+
+  name         String
+  phone        String
+  email        String?
+  city         String
+  neighborhood String?
+
+  propertyPurpose PropertyPurpose
+  propertyType    String?
+  desiredValue    Decimal? @db.Decimal(12, 2)
+
+  // origem — três camadas
+  technicalSourceId String? // interno, nunca serializado ao tenant
+  technicalSource   TechnicalSource? @relation(fields: [technicalSourceId], references: [id])
+  businessChannelId String?
+  businessChannel   BusinessChannel? @relation(fields: [businessChannelId], references: [id])
+  campaignId        String?
+  campaign          Campaign?        @relation(fields: [campaignId], references: [id])
+
+  statusKey LeadStatusKey @default(NEW)
+  enteredAt DateTime      @default(now())
+
+  assignedToUserId String?
+  assignedToUser   User?   @relation("LeadAssignee", fields: [assignedToUserId], references: [id])
+
+  observations String? // texto exclusivamente comercial — nunca recebe rastro técnico
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  movements        LeadMovement[]
+  actions          LeadAction[]
+  tasks            LeadTask[]
+  attachments      LeadAttachment[]
+  timelineViews    LeadTimelineView[]
+  whatsappMessages WhatsAppMessage[]
+
+  @@index([tenantId, statusKey])
+  @@index([tenantId, enteredAt])
+  @@index([tenantId, city])
+  @@index([tenantId, neighborhood])
+  @@index([tenantId, phone])
+  @@index([tenantId, name])
+  @@index([tenantId, workspaceId])
+  @@index([tenantId, businessChannelId])
+  @@index([tenantId, assignedToUserId])
+}
+
+model LeadMovement {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  leadId String
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  fromStatus LeadStatusKey?
+  toStatus   LeadStatusKey?
+
+  changedByUserId String?
+  changedByUser   User?   @relation("LeadMovementChangedBy", fields: [changedByUserId], references: [id])
+
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, leadId, createdAt])
+}
+
+model LeadAction {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  leadId String
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  type        LeadActionType
+  scheduledAt DateTime?
+  performedAt DateTime?
+
+  notes           String?
+  createdAt       DateTime @default(now())
+  createdByUserId String?
+  createdByUser   User?    @relation("LeadActionCreatedBy", fields: [createdByUserId], references: [id])
+
+  @@index([tenantId, leadId])
+  @@index([tenantId, scheduledAt])
+}
+
+model LeadTask {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  leadId String
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  title       String
+  dueAt       DateTime
+  completedAt DateTime?
+
+  completedByUserId String?
+  completedByUser   User?   @relation("LeadTaskCompletedBy", fields: [completedByUserId], references: [id])
+
+  assignedToUserId String?
+  assignedToUser   User?   @relation("LeadTaskAssignedTo", fields: [assignedToUserId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, dueAt])
+  @@index([tenantId, completedAt])
+  @@index([tenantId, assignedToUserId])
+}
+
+model LeadAttachment {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  leadId String
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  fileName  String
+  mimeType  String?
+  url       String
+  createdAt DateTime @default(now())
+}
+
+model LeadTimelineView {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  leadId String
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  lastSeenAt DateTime @default(now())
+
+  @@unique([tenantId, leadId, userId])
+}
+
+model LeadDistributionRule {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  mode     DistributionMode
+  isActive Boolean          @default(true)
+  priority Int              @default(0)
+
+  city            String?
+  neighborhood    String?
+  propertyPurpose PropertyPurpose?
+  propertyType    String?
+
+  businessChannelId String? // substitui o antigo leadSourceKey (string solta)
+  businessChannel   BusinessChannel? @relation(fields: [businessChannelId], references: [id])
+
+  assignedToUserId String?
+  assignedToUser   User?   @relation("DistributionRuleAssignedTo", fields: [assignedToUserId], references: [id])
+
+  roundRobinUserOrder Json?
+  roundRobinIndex     Int  @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, isActive, priority])
+}
+
+model Notification {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  type    NotificationType
+  title   String
+  message String?
+
+  isRead    Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  readAt    DateTime?
+
+  @@index([tenantId, userId, createdAt])
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// OBSERVABILIDADE INTERNA: Audit, Health, Domain Events
+// ───────────────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id String @id @default(cuid())
+
+  actorType AuditActorType
+  staffId   String?
+  staff     AvelonStaff? @relation(fields: [staffId], references: [id])
+  userId    String?
+  user      User?        @relation(fields: [userId], references: [id])
+
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+
+  action   String // "tenant.integration.viewed", "tenant.integration.token_updated", ...
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([staffId, createdAt])
+}
+
+model IntegrationHealthLog {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  technicalSourceId String?
+  technicalSource   TechnicalSource? @relation(fields: [technicalSourceId], references: [id])
+
+  status  IntegrationHealthStatus
+  message String?
+
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+}
+
+model DomainEventLog {
+  id       String  @id @default(cuid())
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  type    String // "lead.created", "lead.moved", "whatsapp.message.received", ...
+  payload Json
+
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, type, createdAt])
+}
