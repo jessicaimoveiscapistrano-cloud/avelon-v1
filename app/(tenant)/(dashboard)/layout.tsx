@@ -1,7 +1,3 @@
-// app/(tenant)/(dashboard)/layout.tsx  (VERSÃO FINAL — nunca tinha sido
-// persistida fisicamente; consolida aqui o patch de nav pendente da
-// Sprint 1 e o novo gate de feature da Fase 6)
-
 import Link from "next/link";
 import { requireTenantUser } from "@/server/auth/requireTenant";
 import { hasAnyCrmFeature } from "@/server/services/access/features";
@@ -13,28 +9,23 @@ const NAV = [
   { href: "/agenda", label: "Agenda" },
   { href: "/relatorios", label: "Relatórios" },
   { href: "/usuarios", label: "Usuários" },
-  { href: "/integracoes", label: "Integrações" }, // ✅ consolidado (era 2 links técnicos)
+  { href: "/integracoes", label: "Integrações" },
 ];
+
+export const dynamic = "force-dynamic";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await requireTenantUser();
 
-  // ✅ Fase 6: ponto único de gate de módulo contratado. V1 só vende CRM,
-  // então isto é uma formalidade hoje — mas é o mesmo lugar que vai
-  // bloquear acesso caso um plano seja cancelado/vencido no futuro, sem
-  // precisar espalhar a checagem por rota.
   const crmActive = await hasAnyCrmFeature(user.tenantId);
 
   if (!crmActive) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-8">
-        <div className="max-w-md text-center">
-          <h1 className="text-lg font-semibold text-slate-900 mb-2">
-            Módulo CRM indisponível
-          </h1>
-          <p className="text-sm text-slate-500">
-            Sua assinatura não está ativa no momento. Entre em contato com
-            seu consultor Avelon para regularizar o acesso.
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f6f5f2", padding: 32 }}>
+        <div style={{ maxWidth: 420, textAlign: "center" }}>
+          <h1 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Módulo CRM indisponível</h1>
+          <p style={{ fontSize: 14, color: "#6b7280" }}>
+            Sua assinatura não está ativa no momento. Entre em contato com seu consultor Avelon.
           </p>
         </div>
       </div>
@@ -42,26 +33,67 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   return (
-    <div className="min-h-screen flex bg-slate-50">
-      <aside className="w-56 bg-white border-r border-slate-200 p-4 flex flex-col">
-        <p className="text-sm font-semibold text-slate-900 mb-6">Avelon CRM</p>
-        <nav className="space-y-1">
+    <div style={{ minHeight: "100vh", display: "flex", background: "#f6f5f2" }}>
+      <aside
+        style={{
+          width: 236,
+          background: "linear-gradient(180deg, #111a33 0%, #0d1326 100%)",
+          color: "#e7e9f2",
+          padding: "20px 14px",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "4px 6px 20px" }}>
+          <div
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: 8,
+              background: "linear-gradient(135deg, #b8923f, #8a6a26)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontFamily: "Georgia, serif",
+              fontWeight: 700,
+              color: "#241b06",
+              fontSize: 14,
+            }}
+          >
+            A
+          </div>
+          <div style={{ fontFamily: "Georgia, serif", fontSize: 15.5, fontWeight: 700, color: "#f5f3ec" }}>
+            Avelon CRM
+          </div>
+        </div>
+
+        <nav style={{ display: "flex", flexDirection: "column", gap: 2 }}>
           {NAV.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="block text-sm text-slate-600 hover:bg-slate-100 rounded-lg px-3 py-2"
+              style={{
+                display: "block",
+                padding: "9px 10px",
+                borderRadius: 9,
+                fontSize: 13,
+                color: "#c7cbe0",
+                fontWeight: 500,
+                textDecoration: "none",
+              }}
             >
               {item.label}
             </Link>
           ))}
         </nav>
-        <div className="mt-auto pt-4 border-t border-slate-100">
-          <p className="text-xs text-slate-500">{user.name}</p>
-          <p className="text-xs text-slate-400">{user.role}</p>
+
+        <div style={{ marginTop: "auto", paddingTop: 14, borderTop: "1px solid rgba(255,255,255,.08)" }}>
+          <div style={{ fontSize: 12.5, color: "#f1f2f8" }}>{user.name}</div>
+          <div style={{ fontSize: 11, color: "#8b91ab" }}>{user.role}</div>
         </div>
       </aside>
-      <main className="flex-1">{children}</main>
+
+      <main style={{ flex: 1, minWidth: 0 }}>{children}</main>
     </div>
   );
 }
