@@ -2,6 +2,7 @@
 
 import { prisma } from "@/server/prisma/client";
 import { requireStaffUser } from "@/server/auth/staffSession";
+export const dynamic = "force-dynamic";
 
 export default async function StaffAuditLogsPage() {
   await requireStaffUser();
