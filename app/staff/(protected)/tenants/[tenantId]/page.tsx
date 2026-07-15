@@ -5,6 +5,7 @@ import { requireStaffUser } from "@/server/auth/staffSession";
 import { logAudit } from "@/server/services/audit/logAudit";
 import { notFound } from "next/navigation";
 import { FacebookConfigForm, WhatsAppConfigForm } from "@/components/staff/IntegrationConfigForms";
+export const dynamic = "force-dynamic";
 
 export default async function StaffTenantDetailPage({ params }: { params: { tenantId: string } }) {
   const staff = await requireStaffUser();
