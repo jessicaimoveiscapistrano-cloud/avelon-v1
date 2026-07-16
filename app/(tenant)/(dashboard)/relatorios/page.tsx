@@ -1,25 +1,69 @@
 "use client";
 import { useEffect, useState } from "react";
+
 export default function RelatoriosPage() {
   const [data, setData] = useState<any>(null);
+
   useEffect(() => { fetch("/api/dashboard").then((r) => r.json()).then(setData); }, []);
-  if (!data) return <div className="p-8 text-slate-400">Carregando...</div>;
+
+  if (!data) return <div style={{ padding: 32, color: "#9498a3" }}>Carregando...</div>;
+
+  const kpis = [
+    { label: "Total", value: data.total, color: "#181a1f" },
+    { label: "WON", value: data.won.count, color: "#1f8f65" },
+    { label: "Valor WON", value: `R$ ${data.won.totalValue}`, color: "#b8923f" },
+    { label: "Taxa", value: `${(data.conversionRate * 100).toFixed(1)}%`, color: "#4c5fd7" },
+  ];
+
   return (
-    <div className="p-8 space-y-6">
-      <h1 className="text-xl font-semibold">Relatórios</h1>
-      <div className="grid grid-cols-4 gap-4">
-        <div className="bg-white border rounded-2xl p-5"><p className="text-xs text-slate-400">Total</p><p className="text-2xl font-semibold">{data.total}</p></div>
-        <div className="bg-white border rounded-2xl p-5"><p className="text-xs text-slate-400">WON</p><p className="text-2xl font-semibold">{data.won.count}</p></div>
-        <div className="bg-white border rounded-2xl p-5"><p className="text-xs text-slate-400">Valor WON</p><p className="text-2xl font-semibold">R$ {data.won.totalValue}</p></div>
-        <div className="bg-white border rounded-2xl p-5"><p className="text-xs text-slate-400">Taxa</p><p className="text-2xl font-semibold">{(data.conversionRate*100).toFixed(1)}%</p></div>
+    <div style={{ padding: 28 }}>
+      <h1 style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, marginBottom: 20 }}>
+        Relatórios
+      </h1>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
+        {kpis.map((k) => (
+          <div
+            key={k.label}
+            style={{
+              background: "#fff", border: "1px solid #e5e2d9", borderRadius: 14, padding: "18px 20px",
+              boxShadow: "0 1px 2px rgba(17,26,51,.04), 0 8px 24px -12px rgba(17,26,51,.12)",
+            }}
+          >
+            <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", color: "#9498a3", marginBottom: 8 }}>
+              {k.label}
+            </div>
+            <div style={{ fontFamily: "Georgia, serif", fontSize: 26, fontWeight: 700, color: k.color }}>
+              {k.value}
+            </div>
+          </div>
+        ))}
       </div>
-      <div className="bg-white border rounded-2xl p-5">
-        <h2 className="font-semibold mb-3">Por canal</h2>
-        <table className="w-full text-sm">
-          <thead><tr className="text-left text-slate-500"><th>Canal</th><th>Total</th><th>WON</th><th>Taxa</th></tr></thead>
+
+      <div
+        style={{
+          background: "#fff", border: "1px solid #e5e2d9", borderRadius: 14, padding: 20,
+          boxShadow: "0 1px 2px rgba(17,26,51,.04)",
+        }}
+      >
+        <h2 style={{ fontSize: 14.5, fontWeight: 700, marginBottom: 14 }}>Por canal</h2>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}>
+          <thead>
+            <tr style={{ textAlign: "left", color: "#9498a3" }}>
+              <th style={{ paddingBottom: 8 }}>Canal</th>
+              <th style={{ paddingBottom: 8 }}>Total</th>
+              <th style={{ paddingBottom: 8 }}>WON</th>
+              <th style={{ paddingBottom: 8 }}>Taxa</th>
+            </tr>
+          </thead>
           <tbody>
             {data.bySource.map((s: any) => (
-              <tr key={s.channelType} className="border-t"><td>{s.channelLabel}</td><td>{s.total}</td><td>{s.won}</td><td>{(s.conversionRate*100).toFixed(1)}%</td></tr>
+              <tr key={s.channelType} style={{ borderTop: "1px solid #f0efe9" }}>
+                <td style={{ padding: "10px 0" }}>{s.channelLabel}</td>
+                <td>{s.total}</td>
+                <td style={{ color: "#1f8f65", fontWeight: 600 }}>{s.won}</td>
+                <td>{(s.conversionRate * 100).toFixed(1)}%</td>
+              </tr>
             ))}
           </tbody>
         </table>
