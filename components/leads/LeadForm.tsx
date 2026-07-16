@@ -29,33 +29,52 @@ export default function LeadForm({ initialData }: { initialData?: any }) {
 
   const set = (k: string) => (v: string) => setForm({ ...form, [k]: v });
 
+  const cardStyle: React.CSSProperties = {
+    maxWidth: 640, background: "#fff", border: "1px solid #e5e2d9", borderRadius: 14, padding: 24,
+    boxShadow: "0 1px 2px rgba(17,26,51,.04), 0 8px 24px -12px rgba(17,26,51,.12)",
+  };
+
   return (
-    <form onSubmit={handleSubmit} className="max-w-2xl bg-white border rounded-2xl p-6 space-y-4">
-      <div className="grid grid-cols-2 gap-4">
+    <form onSubmit={handleSubmit} style={cardStyle}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
         <F label="Nome" value={form.name} onChange={set("name")} required />
         <F label="Telefone" value={form.phone} onChange={set("phone")} required />
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
         <F label="E-mail" value={form.email} onChange={set("email")} />
         <F label="Cidade" value={form.city} onChange={set("city")} required />
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
         <F label="Bairro" value={form.neighborhood} onChange={set("neighborhood")} />
         <div>
-          <label className="text-sm text-slate-600">Finalidade</label>
-          <select value={form.propertyPurpose} onChange={(e) => set("propertyPurpose")(e.target.value)}
-            className="w-full mt-1 border rounded-lg px-3 py-2 text-sm">
-            <option value="SALE">Venda</option><option value="RENT">Aluguel</option>
+          <label style={{ display: "block", fontSize: 13, marginBottom: 6, color: "#3a3d45" }}>Finalidade</label>
+          <select
+            value={form.propertyPurpose}
+            onChange={(e) => set("propertyPurpose")(e.target.value)}
+            style={{ width: "100%", border: "1px solid #e5e2d9", borderRadius: 9, padding: "9px 12px", fontSize: 13.5 }}
+          >
+            <option value="SALE">Venda</option>
+            <option value="RENT">Aluguel</option>
           </select>
         </div>
       </div>
-      <F label="Valor desejado" value={form.desiredValue} onChange={set("desiredValue")} type="number" />
-      <div>
-        <label className="text-sm text-slate-600">Observações</label>
-        <textarea value={form.observations} onChange={(e) => set("observations")(e.target.value)} rows={3}
-          className="w-full mt-1 border rounded-lg px-3 py-2 text-sm" />
+      <div style={{ marginBottom: 16 }}>
+        <F label="Valor desejado" value={form.desiredValue} onChange={set("desiredValue")} type="number" />
       </div>
-      <button type="submit" disabled={loading} className="bg-indigo-600 text-white rounded-lg px-5 py-2 text-sm">
+      <div style={{ marginBottom: 18 }}>
+        <label style={{ display: "block", fontSize: 13, marginBottom: 6, color: "#3a3d45" }}>Observações</label>
+        <textarea
+          value={form.observations}
+          onChange={(e) => set("observations")(e.target.value)}
+          rows={3}
+          style={{ width: "100%", border: "1px solid #e5e2d9", borderRadius: 9, padding: "9px 12px", fontSize: 13.5, fontFamily: "inherit" }}
+        />
+      </div>
+      <button
+        type="submit"
+        disabled={loading}
+        style={{ background: "#111a33", color: "#fff", border: "none", borderRadius: 10, padding: "11px 20px", fontSize: 13.5, fontWeight: 700 }}
+      >
         {loading ? "Salvando..." : isEdit ? "Salvar" : "Cadastrar"}
       </button>
     </form>
@@ -65,9 +84,14 @@ export default function LeadForm({ initialData }: { initialData?: any }) {
 function F({ label, value, onChange, type = "text", required }: any) {
   return (
     <div>
-      <label className="text-sm text-slate-600">{label}</label>
-      <input type={type} value={value} required={required} onChange={(e) => onChange(e.target.value)}
-        className="w-full mt-1 border rounded-lg px-3 py-2 text-sm" />
+      <label style={{ display: "block", fontSize: 13, marginBottom: 6, color: "#3a3d45" }}>{label}</label>
+      <input
+        type={type}
+        value={value}
+        required={required}
+        onChange={(e) => onChange(e.target.value)}
+        style={{ width: "100%", border: "1px solid #e5e2d9", borderRadius: 9, padding: "9px 12px", fontSize: 13.5 }}
+      />
     </div>
   );
 }
