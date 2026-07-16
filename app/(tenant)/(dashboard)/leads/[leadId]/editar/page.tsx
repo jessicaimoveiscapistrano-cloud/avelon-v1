@@ -10,16 +10,20 @@ export default function EditarLeadPage({ params }: { params: { leadId: string } 
     fetch(`/api/leads/${params.leadId}`).then((r) => r.json()).then(setLead);
   }, [params.leadId]);
 
-  if (!lead) return <div className="p-8 text-slate-400">Carregando...</div>;
+  if (!lead) return <div style={{ padding: 32, color: "#9498a3" }}>Carregando...</div>;
 
   return (
-    <div className="p-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div style={{ padding: 28, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
       <div>
-        <h1 className="text-xl font-semibold mb-6">Editar lead</h1>
+        <h1 style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, marginBottom: 20 }}>
+          Editar lead
+        </h1>
         <LeadForm initialData={lead} />
       </div>
       <div>
-        <h2 className="text-xl font-semibold mb-6">Conversa</h2>
+        <h2 style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, marginBottom: 20 }}>
+          Conversa
+        </h2>
         <LeadWhatsAppChat leadId={lead.id} />
       </div>
     </div>
