@@ -1,15 +1,4 @@
-// app/(tenant)/(dashboard)/integracoes/page.tsx
-//
-// SUBSTITUI app/(tenant)/(dashboard)/integracoes/facebook/page.tsx e
-// .../whatsapp/page.tsx (ambas devem ser DELETADAS — tinham formulário
-// pedindo Page Access Token / WhatsApp Access Token, exatamente o que não
-// pode aparecer para o cliente).
-//
-// Esta tela é só leitura. Conectar/configurar um canal é ação da Avelon
-// Platform (Fase 7), não do tenant.
-
 "use client";
-
 import { useEffect, useState } from "react";
 
 type IntegrationStatus = { canal: string; label: string; conectado: boolean };
@@ -26,24 +15,33 @@ export default function IntegracoesPage() {
   }, []);
 
   return (
-    <div className="p-8 max-w-2xl">
-      <h1 className="text-xl font-semibold text-slate-900 mb-2">Integrações</h1>
-      <p className="text-sm text-slate-500 mb-6">
-        Canais conectados ao seu CRM. Para conectar um novo canal, fale com
-        seu consultor Avelon.
+    <div style={{ padding: 28, maxWidth: 640 }}>
+      <h1 style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, marginBottom: 4 }}>
+        Integrações
+      </h1>
+      <p style={{ fontSize: 13, color: "#9498a3", marginBottom: 20 }}>
+        Canais conectados ao seu CRM. Para conectar um novo canal, fale com seu consultor Avelon.
       </p>
 
       {loading ? (
-        <p className="text-sm text-slate-400">Carregando...</p>
+        <p style={{ fontSize: 13, color: "#9498a3" }}>Carregando...</p>
       ) : (
-        <div className="bg-white border border-slate-200 rounded-2xl divide-y divide-slate-100">
+        <div style={{ background: "#fff", border: "1px solid #e5e2d9", borderRadius: 14, overflow: "hidden", boxShadow: "0 1px 2px rgba(17,26,51,.04)" }}>
           {integracoes.map((i) => (
-            <div key={i.canal} className="flex items-center justify-between p-4">
-              <span className="text-sm font-medium text-slate-800">{i.label}</span>
+            <div
+              key={i.canal}
+              style={{
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+                padding: "16px 18px", borderBottom: "1px solid #f0efe9",
+              }}
+            >
+              <span style={{ fontSize: 13.5, fontWeight: 600 }}>{i.label}</span>
               <span
-                className={`text-xs rounded-full px-2 py-0.5 ${
-                  i.conectado ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"
-                }`}
+                style={{
+                  fontSize: 11.5, fontWeight: 600, padding: "3px 9px", borderRadius: 20,
+                  background: i.conectado ? "#e2f3ec" : "#f0efe9",
+                  color: i.conectado ? "#1f8f65" : "#6b7280",
+                }}
               >
                 {i.conectado ? "Conectado" : "Não conectado"}
               </span>
