@@ -44,10 +44,17 @@ export default function LoginPage() {
             Avelon CRM
           </div>
           <div style={{ fontFamily: "Georgia, serif", fontSize: 38, lineHeight: 1.12, fontWeight: 500, maxWidth: "9.5em", marginTop: 60 }}>
-            Cada imóvel tem uma <em style={{ color: "#b8923f", fontStyle: "italic" }}>história</em>.
+            Cada imóvel tem uma <em style={{ color: "#b8923f", fontStyle: "italic" }}>história</em>.<br />
+            Cada lead, um final.
           </div>
+          <p style={{ color: "#9aa1ba", fontSize: 15, maxWidth: "30em", marginTop: 18 }}>
+            A plataforma que acompanha sua imobiliária do primeiro contato até a chave na mão —
+            leads, agenda, WhatsApp e relatórios em um só lugar.
+          </p>
         </div>
-        <div style={{ color: "#9aa1ba", fontSize: 12.5 }}>Imobiliária Avelon</div>
+        <div style={{ borderTop: "1px solid rgba(244,242,234,.14)", paddingTop: 20, color: "#9aa1ba", fontSize: 13 }}>
+          "Reduzimos o tempo até o fechamento em 31% depois de centralizar tudo no Avelon." — Imobiliária Avelon
+        </div>
       </div>
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 40, background: "#fff" }}>
